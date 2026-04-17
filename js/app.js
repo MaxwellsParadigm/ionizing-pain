@@ -89,7 +89,26 @@ async function deleteCampaign(id) {
 }
 
 async function selectCampaign(id) {
-  const campaign = await apiGet(`/campaigns/${id}`);
+  let campaign;
+  try {
+    campaign = await apiGet(`/campaigns/${id}`);
+  } catch(e) {
+    alert('Could not load campaign: ' + e.message);
+    return;
+  }
+
+  // Guard against bad response (tunnel returning HTML error page instead of JSON)
+  if (!campaign || typeof campaign !== 'object' || !campaign.id) {
+    alert('Server returned an unexpected response. Check the server console.');
+    console.error('Unexpected campaign response:', campaign);
+    return;
+  }
+
+  // Ensure required arrays exist (defensive against old save files)
+  campaign.profiles   = campaign.profiles   || [];
+  campaign.characters = campaign.characters || {};
+  campaign.log        = campaign.log        || [];
+
   el('picker-campaign-name').textContent = campaign.name;
   renderProfilePicker(campaign);
   el('profilePicker').classList.add('open');
@@ -99,11 +118,13 @@ function renderProfilePicker(campaign) {
   const grid = el('profile-grid');
   grid.innerHTML = '';
 
-  if (!campaign.profiles.length) {
-    grid.innerHTML = '<div style="color:var(--text-dim);font-size:10px;text-align:center;width:100%;">No profiles yet. GM must add them first.<br>Join as GM to manage profiles.</div>';
+  const profiles = campaign.profiles || [];
+
+  if (!profiles.length) {
+    grid.innerHTML = '<div style="color:var(--text-dim);font-size:10px;text-align:center;width:100%;padding:10px 0;">No profiles yet.<br>Join as GM first, then add profiles under the PROFILES page.</div>';
   }
 
-  campaign.profiles.forEach(profile => {
+  profiles.forEach(profile => {
     const card = document.createElement('div');
     card.className = 'profile-card' + (profile.occupied ? ' occupied' : '');
     card.innerHTML = `
@@ -116,7 +137,7 @@ function renderProfilePicker(campaign) {
     grid.appendChild(card);
   });
 
-  // Store for reference
+  // Store campaign reference for GM join
   el('profilePicker')._campaign = campaign;
 }
 

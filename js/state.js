@@ -233,8 +233,12 @@ function handleServerMsg(msg) {
 // ─────────────────────────────────────────────
 async function apiGet(path) {
   const r = await fetch(API_BASE + path);
-  if (!r.ok) throw new Error(`HTTP ${r.status}`);
-  return r.json();
+  const text = await r.text();
+  // Dev tunnels sometimes return an HTML warning/auth page instead of JSON
+  if (text.trim().startsWith('<')) {
+    throw new Error('Server returned HTML instead of JSON — the tunnel may require authentication. Open ' + API_BASE.replace('/api','') + ' in a new tab and accept any warnings first.');
+  }
+  return JSON.parse(text);
 }
 
 async function apiPost(path, body) {
@@ -244,14 +248,16 @@ async function apiPost(path, body) {
     headers: { 'Content-Type': 'text/plain' },
     body: JSON.stringify(body),
   });
-  if (!r.ok) throw new Error(`HTTP ${r.status}`);
-  return r.json();
+  const text = await r.text();
+  if (text.trim().startsWith('<')) throw new Error('HTML response from tunnel');
+  return JSON.parse(text);
 }
 
 async function apiDelete(path) {
   const r = await fetch(API_BASE + path, { method: 'DELETE' });
-  if (!r.ok) throw new Error(`HTTP ${r.status}`);
-  return r.json();
+  const text = await r.text();
+  if (text.trim().startsWith('<')) throw new Error('HTML response from tunnel');
+  return JSON.parse(text);
 }
 
 // ─────────────────────────────────────────────
