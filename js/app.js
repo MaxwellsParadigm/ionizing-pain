@@ -132,7 +132,11 @@ function renderProfilePicker(campaign) {
   const profiles = campaign.profiles || [];
 
   if (!profiles.length) {
-    grid.innerHTML = '<div style="color:var(--text-dim);font-size:10px;text-align:center;width:100%;padding:10px 0;">No profiles yet.<br>Join as GM first, then add profiles under the PROFILES page.</div>';
+  grid.innerHTML = `
+    <div style="color:var(--text-dim);font-size:10px;text-align:center;width:100%;padding:20px 0;line-height:1.6;">
+      No player profiles yet.<br><br>
+      <strong style="color:var(--blood-bright);">You should join as Gamemaster first.</strong>
+    </div>`;
   }
 
   profiles.forEach(profile => {
