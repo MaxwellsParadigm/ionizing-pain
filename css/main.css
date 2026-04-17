@@ -635,19 +635,22 @@ input[type="number"] { -moz-appearance: textfield; }
   .topbar-campaign { display: none; }
 }
 
+/* ==================== CRITICAL PROFILE PICKER FIX ==================== */
 #profilePicker {
-  display: none !important;   /* override any inline issues */
+  position: fixed !important;
+  inset: 0 !important;
+  background: var(--bg) !important;
+  z-index: 9999 !important;           /* much higher than landing (500) */
+  display: none !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
+
 #profilePicker.open {
   display: flex !important;
 }
 
-/* FORCE PROFILE PICKER VISIBILITY - critical for tunnels */
-#profilePicker {
-  display: none !important;
-}
-#profilePicker.open {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
+#profilePicker .landing-box {
+  z-index: 10000 !important;
+  box-shadow: 0 0 40px rgba(201, 43, 43, 0.6) !important;
 }

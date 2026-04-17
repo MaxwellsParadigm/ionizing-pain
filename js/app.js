@@ -127,12 +127,17 @@ async function selectCampaign(id) {
   console.log(`[IP] Existing campaign with ${campaign.profiles.length} profiles → rendering picker`);
   renderProfilePicker(campaign);
 
-  // Force open with delay (helps with rendering/tunnel quirks)
+  // Force open with small delay + force repaint (helps tunnels)
   setTimeout(() => {
     const picker = el('profilePicker');
     picker.classList.add('open');
-    console.log('[IP] profilePicker .open class added. Current display:', getComputedStyle(picker).display);
-  }, 10);
+    
+    // Force browser repaint
+    void picker.offsetWidth;
+    
+    console.log('[IP] profilePicker .open added | Computed display:', 
+                getComputedStyle(picker).display);
+  }, 20);
 }
 
 // ─────────────────────────────────────────────
@@ -140,7 +145,7 @@ async function selectCampaign(id) {
 function renderProfilePicker(campaign) {
   const grid = el('profile-grid');
   if (!grid) {
-    console.error('[IP] #profile-grid element not found!');
+    console.error('[IP] CRITICAL: #profile-grid not found!');
     return;
   }
 
@@ -150,9 +155,9 @@ function renderProfilePicker(campaign) {
 
   if (profiles.length === 0) {
     grid.innerHTML = `
-      <div style="color:var(--text-dim);font-size:11px;text-align:center;width:100%;padding:40px 20px;line-height:1.6;">
+      <div style="color:var(--blood-bright);font-size:12px;text-align:center;padding:40px 20px;">
         No player profiles yet.<br><br>
-        <strong style="color:var(--blood-bright);">Join as Gamemaster first.</strong>
+        <strong>Join as Gamemaster to begin the session.</strong>
       </div>`;
   } else {
     profiles.forEach(profile => {
@@ -169,8 +174,10 @@ function renderProfilePicker(campaign) {
     });
   }
 
+  // Always ensure GM button has reference
   el('profilePicker')._campaign = campaign;
-  console.log(`[IP] renderProfilePicker done. ${profiles.length} profiles rendered.`);
+
+  console.log(`[IP] renderProfilePicker done — ${profiles.length} profile(s) rendered`);
 }
 
 async function joinAsPlayer(campaignId, profileId, campaign) {
