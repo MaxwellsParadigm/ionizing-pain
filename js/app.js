@@ -88,6 +88,8 @@ async function deleteCampaign(id) {
   loadCampaigns();
 }
 
+// ─────────────────────────────────────────────
+// SELECT CAMPAIGN (fixed)
 async function selectCampaign(id) {
   let campaign;
   try {
@@ -103,14 +105,14 @@ async function selectCampaign(id) {
     return;
   }
 
-  // Defensive
+  // Defensive fixes
   campaign.profiles   = campaign.profiles   || [];
   campaign.characters = campaign.characters || {};
   campaign.log        = campaign.log        || [];
 
   el('picker-campaign-name').textContent = campaign.name;
 
-  // AUTO JOIN AS GM if this is a fresh campaign (no profiles)
+  // AUTO-JOIN AS GM only if it's a completely fresh campaign (no profiles yet)
   if (campaign.profiles.length === 0) {
     console.log("[IP] Fresh campaign → auto-joining as GM");
     el('profilePicker').classList.remove('open');
@@ -120,11 +122,13 @@ async function selectCampaign(id) {
     return;
   }
 
-  // Otherwise show profile picker
+  // Existing campaign → show profile picker with GM button always available
   renderProfilePicker(campaign);
   el('profilePicker').classList.add('open');
 }
 
+// ─────────────────────────────────────────────
+// RENDER PROFILE PICKER (fixed + GM button always visible)
 function renderProfilePicker(campaign) {
   const grid = el('profile-grid');
   grid.innerHTML = '';
@@ -135,9 +139,10 @@ function renderProfilePicker(campaign) {
     grid.innerHTML = `
       <div style="color:var(--text-dim);font-size:11px;text-align:center;width:100%;padding:30px 20px;line-height:1.6;">
         No player profiles yet.<br><br>
-        <strong style="color:var(--blood-bright);">Join as Gamemaster to get started.</strong>
+        <strong style="color:var(--blood-bright);">You are the first here — join as Gamemaster.</strong>
       </div>`;
   } else {
+    // Show player profile cards
     profiles.forEach(profile => {
       const card = document.createElement('div');
       card.className = 'profile-card' + (profile.occupied ? ' occupied' : '');
@@ -152,7 +157,7 @@ function renderProfilePicker(campaign) {
     });
   }
 
-  // Always show the GM button at the bottom
+  // IMPORTANT: Always make sure the GM button can be used
   el('profilePicker')._campaign = campaign;
 }
 
