@@ -27,6 +27,7 @@ async function loadCampaigns() {
   if (raw) {
     setServerUrl(raw);
     localStorage.setItem('ip_server_url', raw);
+    console.info(`[IP] Input: "${raw}"\n[IP] API → ${API_BASE}\n[IP] WS  → ${SERVER_URL}`);
   }
 
   // If still no API_BASE (hosted on GH Pages, no URL entered yet) show prompt

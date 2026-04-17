@@ -31,12 +31,13 @@ function setServerUrl(raw) {
   raw = (raw || '').trim().replace(/\/$/, '');
   if (!raw) return false;
 
-  // Already has scheme
+  // Already has a WS scheme — use as-is
   if (raw.startsWith('ws://') || raw.startsWith('wss://')) {
     SERVER_URL = raw;
     API_BASE   = raw.replace('wss://', 'https://').replace('ws://', 'http://') + '/api';
     return true;
   }
+  // Already has HTTP scheme
   if (raw.startsWith('https://')) {
     SERVER_URL = raw.replace('https://', 'wss://');
     API_BASE   = raw + '/api';
@@ -48,20 +49,40 @@ function setServerUrl(raw) {
     return true;
   }
 
-  // Bare host or host:port — detect scheme from page protocol
-  const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
-  const httpScheme = window.location.protocol === 'https:' ? 'https' : 'http';
-  // Add default port if none supplied
-  const hasPort = /:\d+$/.test(raw);
-  const full = hasPort ? raw : `${raw}:3000`;
-  SERVER_URL = `${scheme}://${full}`;
-  API_BASE   = `${httpScheme}://${full}/api`;
+  // Bare hostname or host:port
+  // Detect scheme from current page protocol
+  const isHttps = window.location.protocol === 'https:';
+  const wsScheme   = isHttps ? 'wss'   : 'ws';
+  const httpScheme = isHttps ? 'https' : 'http';
+
+  // Check if an explicit port is already included (e.g. 192.168.1.42:4000)
+  const hasExplicitPort = /:\d+$/.test(raw);
+
+  // Tunnel hostnames that embed the port in the subdomain — never append a port.
+  // Matches: *.ngrok.io, *.ngrok-free.app, *.devtunnels.ms, *.loca.lt, *.tunnelmole.net
+  const isTunnelHost = /\.(ngrok\.io|ngrok-free\.app|devtunnels\.ms|loca\.lt|tunnelmole\.net)$/.test(raw);
+
+  if (hasExplicitPort || isTunnelHost) {
+    // Use hostname exactly as given — no port suffix
+    SERVER_URL = `${wsScheme}://${raw}`;
+    API_BASE   = `${httpScheme}://${raw}/api`;
+  } else {
+    // Local IP or hostname — append default port
+    SERVER_URL = `${wsScheme}://${raw}:3000`;
+    API_BASE   = `${httpScheme}://${raw}:3000/api`;
+  }
   return true;
 }
 
 // Persist server URL across reloads
 const _savedUrl = localStorage.getItem('ip_server_url');
 if (_savedUrl) setServerUrl(_savedUrl);
+
+// Debug: log resolved URLs to console so misconfiguration is immediately visible
+function _logUrls() {
+  if (API_BASE) console.info(`[IP] API → ${API_BASE}\n[IP] WS  → ${SERVER_URL}`);
+}
+setTimeout(_logUrls, 100); // after any setServerUrl calls from DOMContentLoaded
 
 // ─────────────────────────────────────────────
 // APP STATE
