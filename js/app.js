@@ -98,29 +98,29 @@ async function selectCampaign(id) {
   }
 
   if (!campaign || typeof campaign !== 'object' || !campaign.id) {
-    alert('Server returned an unexpected response.');
-    console.error('Bad campaign response:', campaign);
+    alert('Server returned an unexpected response. Check the server console.');
+    console.error('Unexpected campaign response:', campaign);
     return;
   }
 
-  // Defensive fixes
+  // Defensive
   campaign.profiles   = campaign.profiles   || [];
   campaign.characters = campaign.characters || {};
   campaign.log        = campaign.log        || [];
 
   el('picker-campaign-name').textContent = campaign.name;
 
-  // AUTO-JOIN AS GM if this is a brand new campaign (no profiles yet)
+  // AUTO JOIN AS GM if this is a fresh campaign (no profiles)
   if (campaign.profiles.length === 0) {
-    console.log("[IP] New campaign detected → auto-joining as GM");
-    el('profilePicker').classList.remove('open');   // close picker
+    console.log("[IP] Fresh campaign → auto-joining as GM");
+    el('profilePicker').classList.remove('open');
     el('landing').style.display = 'none';
     State.role = 'gm';
     launchApp(campaign, 'gm_' + Date.now(), 'gm');
     return;
   }
 
-  // Normal flow: show profile picker
+  // Otherwise show profile picker
   renderProfilePicker(campaign);
   el('profilePicker').classList.add('open');
 }
@@ -132,27 +132,27 @@ function renderProfilePicker(campaign) {
   const profiles = campaign.profiles || [];
 
   if (!profiles.length) {
-  grid.innerHTML = `
-    <div style="color:var(--text-dim);font-size:10px;text-align:center;width:100%;padding:20px 0;line-height:1.6;">
-      No player profiles yet.<br><br>
-      <strong style="color:var(--blood-bright);">You should join as Gamemaster first.</strong>
-    </div>`;
+    grid.innerHTML = `
+      <div style="color:var(--text-dim);font-size:11px;text-align:center;width:100%;padding:30px 20px;line-height:1.6;">
+        No player profiles yet.<br><br>
+        <strong style="color:var(--blood-bright);">Join as Gamemaster to get started.</strong>
+      </div>`;
+  } else {
+    profiles.forEach(profile => {
+      const card = document.createElement('div');
+      card.className = 'profile-card' + (profile.occupied ? ' occupied' : '');
+      card.innerHTML = `
+        <div class="profile-card-name">${profile.name}</div>
+        <div class="profile-card-status">${profile.occupied ? '● IN USE' : '○ AVAILABLE'}</div>
+      `;
+      if (!profile.occupied) {
+        card.onclick = () => joinAsPlayer(campaign.id, profile.id, campaign);
+      }
+      grid.appendChild(card);
+    });
   }
 
-  profiles.forEach(profile => {
-    const card = document.createElement('div');
-    card.className = 'profile-card' + (profile.occupied ? ' occupied' : '');
-    card.innerHTML = `
-      <div class="profile-card-name">${profile.name}</div>
-      <div class="profile-card-status">${profile.occupied ? '● IN USE' : '○ AVAILABLE'}</div>
-    `;
-    if (!profile.occupied) {
-      card.onclick = () => joinAsPlayer(campaign.id, profile.id, campaign);
-    }
-    grid.appendChild(card);
-  });
-
-  // Store campaign reference for GM join
+  // Always show the GM button at the bottom
   el('profilePicker')._campaign = campaign;
 }
 
