@@ -97,19 +97,30 @@ async function selectCampaign(id) {
     return;
   }
 
-  // Guard against bad response (tunnel returning HTML error page instead of JSON)
   if (!campaign || typeof campaign !== 'object' || !campaign.id) {
-    alert('Server returned an unexpected response. Check the server console.');
-    console.error('Unexpected campaign response:', campaign);
+    alert('Server returned an unexpected response.');
+    console.error('Bad campaign response:', campaign);
     return;
   }
 
-  // Ensure required arrays exist (defensive against old save files)
+  // Defensive fixes
   campaign.profiles   = campaign.profiles   || [];
   campaign.characters = campaign.characters || {};
   campaign.log        = campaign.log        || [];
 
   el('picker-campaign-name').textContent = campaign.name;
+
+  // AUTO-JOIN AS GM if this is a brand new campaign (no profiles yet)
+  if (campaign.profiles.length === 0) {
+    console.log("[IP] New campaign detected → auto-joining as GM");
+    el('profilePicker').classList.remove('open');   // close picker
+    el('landing').style.display = 'none';
+    State.role = 'gm';
+    launchApp(campaign, 'gm_' + Date.now(), 'gm');
+    return;
+  }
+
+  // Normal flow: show profile picker
   renderProfilePicker(campaign);
   el('profilePicker').classList.add('open');
 }
