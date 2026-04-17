@@ -89,32 +89,34 @@ async function deleteCampaign(id) {
 }
 
 // ─────────────────────────────────────────────
-// SELECT CAMPAIGN — improved robustness
+// SELECT CAMPAIGN — ultra defensive + debug
 async function selectCampaign(id) {
+  console.log(`[IP] selectCampaign called for id: ${id}`);
+
   let campaign;
   try {
     campaign = await apiGet(`/campaigns/${id}`);
+    console.log('[IP] Campaign loaded successfully:', campaign);
   } catch(e) {
+    console.error('[IP] Failed to load campaign:', e);
     alert('Could not load campaign: ' + e.message);
     return;
   }
 
   if (!campaign || typeof campaign !== 'object' || !campaign.id) {
-    alert('Server returned an unexpected response. Check the server console.');
-    console.error('Unexpected campaign response:', campaign);
+    alert('Server returned bad data. Check console.');
+    console.error('Bad campaign data:', campaign);
     return;
   }
 
-  // Defensive
   campaign.profiles   = campaign.profiles   || [];
   campaign.characters = campaign.characters || {};
   campaign.log        = campaign.log        || [];
 
-  el('picker-campaign-name').textContent = campaign.name;
+  el('picker-campaign-name').textContent = campaign.name || 'Unnamed Campaign';
 
-  // Fresh campaign (0 profiles) → auto-join as GM
   if (campaign.profiles.length === 0) {
-    console.log("[IP] Fresh campaign → auto-joining as GM");
+    console.log("[IP] Fresh campaign → auto GM");
     el('profilePicker').classList.remove('open');
     el('landing').style.display = 'none';
     State.role = 'gm';
@@ -122,26 +124,35 @@ async function selectCampaign(id) {
     return;
   }
 
-  // Existing campaign → force open the picker and render
-  console.log("[IP] Existing campaign with profiles → opening picker");
+  console.log(`[IP] Existing campaign with ${campaign.profiles.length} profiles → rendering picker`);
   renderProfilePicker(campaign);
-  el('profilePicker').classList.add('open');   // this forces visibility
+
+  // Force open with delay (helps with rendering/tunnel quirks)
+  setTimeout(() => {
+    const picker = el('profilePicker');
+    picker.classList.add('open');
+    console.log('[IP] profilePicker .open class added. Current display:', getComputedStyle(picker).display);
+  }, 10);
 }
 
 // ─────────────────────────────────────────────
-// RENDER PROFILE PICKER — always show GM button
+// RENDER PROFILE PICKER — always visible GM button
 function renderProfilePicker(campaign) {
   const grid = el('profile-grid');
-  if (!grid) return;
+  if (!grid) {
+    console.error('[IP] #profile-grid element not found!');
+    return;
+  }
+
   grid.innerHTML = '';
 
   const profiles = campaign.profiles || [];
 
   if (profiles.length === 0) {
     grid.innerHTML = `
-      <div style="color:var(--text-dim);font-size:11px;text-align:center;width:100%;padding:30px 20px;line-height:1.6;">
+      <div style="color:var(--text-dim);font-size:11px;text-align:center;width:100%;padding:40px 20px;line-height:1.6;">
         No player profiles yet.<br><br>
-        <strong style="color:var(--blood-bright);">Join as Gamemaster to begin.</strong>
+        <strong style="color:var(--blood-bright);">Join as Gamemaster first.</strong>
       </div>`;
   } else {
     profiles.forEach(profile => {
@@ -152,16 +163,14 @@ function renderProfilePicker(campaign) {
         <div class="profile-card-status">${profile.occupied ? '● IN USE' : '○ AVAILABLE'}</div>
       `;
       if (!profile.occupied) {
-        card.style.cursor = 'pointer';
         card.onclick = () => joinAsPlayer(campaign.id, profile.id, campaign);
       }
       grid.appendChild(card);
     });
   }
 
-  // Always attach campaign reference for the GM button
-  const picker = el('profilePicker');
-  picker._campaign = campaign;
+  el('profilePicker')._campaign = campaign;
+  console.log(`[IP] renderProfilePicker done. ${profiles.length} profiles rendered.`);
 }
 
 async function joinAsPlayer(campaignId, profileId, campaign) {
@@ -173,7 +182,12 @@ async function joinAsPlayer(campaignId, profileId, campaign) {
 
 async function joinAsGM() {
   const campaign = el('profilePicker')._campaign;
-  if (!campaign) return;
+  if (!campaign) {
+    console.error('[IP] joinAsGM called but no campaign attached!');
+    alert('No campaign data. Please try clicking the campaign again.');
+    return;
+  }
+  console.log('[IP] Joining as GM...');
   el('profilePicker').classList.remove('open');
   el('landing').style.display = 'none';
   State.role = 'gm';
