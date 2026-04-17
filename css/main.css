@@ -632,3 +632,10 @@ input[type="number"] { -moz-appearance: textfield; }
 @media (max-width: 700px) {
   .topbar-campaign { display: none; }
 }
+
+#profilePicker {
+  display: none !important;   /* override any inline issues */
+}
+#profilePicker.open {
+  display: flex !important;
+}
