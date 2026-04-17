@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IONIZING PAIN — VTT</title>
+<link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+
+<!-- ═══════════════════════════════════
+     LANDING: Campaign Select
+═══════════════════════════════════ -->
+<div id="landing">
+  <div>
+    <div class="landing-logo">IONIZING PAIN</div>
+    <div class="landing-sub">VIRTUAL TABLETOP</div>
+  </div>
+
+  <div class="landing-box">
+    <div style="font-family:var(--font-display);font-size:13px;letter-spacing:3px;color:var(--blood-bright);margin-bottom:12px;">
+      CAMPAIGNS
+    </div>
+    <div id="campaign-list" style="margin-bottom:14px;max-height:240px;overflow-y:auto;">
+      <div style="color:var(--text-dim);font-size:10px;padding:10px 0;">Loading...</div>
+    </div>
+    <div style="border-top:1px solid var(--border);padding-top:12px;">
+      <div class="field">
+        <label class="field-label">NEW CAMPAIGN NAME</label>
+        <input id="new-campaign-name" type="text" placeholder="e.g. Winter Hunt">
+      </div>
+      <button class="btn btn-blood btn-full" onclick="createCampaign()">+ CREATE CAMPAIGN</button>
+    </div>
+    <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">
+      <div class="field">
+        <label class="field-label">SERVER URL (if different from this page)</label>
+        <input id="server-url-input" type="text" placeholder="ws://192.168.1.x:3000"
+          value="">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════
+     PROFILE PICKER
+═══════════════════════════════════ -->
+<div id="profilePicker">
+  <div class="landing-box" style="width:520px;max-width:96vw;">
+    <div style="font-family:var(--font-display);font-size:20px;letter-spacing:4px;color:var(--blood-bright);margin-bottom:6px;">
+      CHOOSE YOUR PIONEER
+    </div>
+    <div style="font-size:10px;color:var(--text-muted);margin-bottom:16px;" id="picker-campaign-name"></div>
+    <div id="profile-grid" style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:16px;"></div>
+    <div style="border-top:1px solid var(--border);padding-top:12px;text-align:center;">
+      <button class="btn btn-gold" onclick="joinAsGM()">⚙ JOIN AS GAMEMASTER</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════
+     APP SHELL
+═══════════════════════════════════ -->
+<div class="app-shell" id="appShell" style="display:none;">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-logo">IP</div>
+    <div class="topbar-campaign" id="topbar-campaign-name">—</div>
+    <nav class="topbar-nav">
+      <button class="nav-btn active" data-page="map"   onclick="showPage('map')">MAP</button>
+      <button class="nav-btn"        data-page="sheet" onclick="showPage('sheet')">PIONEER</button>
+      <button class="nav-btn"        data-page="ref"   onclick="showPage('ref')">REFERENCE</button>
+      <button class="nav-btn gm-only" data-page="profiles" id="nav-profiles"
+        onclick="showPage('profiles')" style="display:none;">PROFILES</button>
+      <button class="nav-btn gm-only" data-page="party" id="nav-party"
+        onclick="showPage('party')" style="display:none;">PARTY</button>
+    </nav>
+    <div class="topbar-profile" id="topbar-profile">—</div>
+    <div id="ws-status" style="width:8px;height:8px;border-radius:50%;background:#4a9a4a;margin-left:8px;" title="Connected"></div>
+  </div>
+
+  <!-- ══════════ PAGE: MAP ══════════ -->
+  <div class="page active" data-page="map" style="flex-direction:row;">
+
+    <!-- Initiative Bar (top) -->
+    <div style="position:absolute;top:48px;left:0;right:360px;z-index:50;
+                background:var(--surface);border-bottom:1px solid var(--border);
+                padding:4px 8px;display:flex;align-items:center;gap:6px;overflow-x:auto;"
+         id="init-bar-wrap">
+      <span style="font-size:9px;letter-spacing:2px;color:var(--text-dim);white-space:nowrap;">INITIATIVE:</span>
+      <div id="init-bar" style="display:flex;gap:4px;min-height:32px;flex:1;align-items:center;"></div>
+      <button class="btn btn-sm btn-blood" onclick="rollInitiativeForAll(el('init-bar'))" id="btn-init-roll"
+        style="white-space:nowrap;">ROLL ALL</button>
+      <button class="btn btn-sm" onclick="nextTurn(el('init-bar'))">NEXT ▶</button>
+    </div>
+
+    <!-- Map Toolbar -->
+    <div id="map-toolbar-wrap" style="position:absolute;top:80px;left:0;right:360px;z-index:49;"></div>
+
+    <!-- Map Canvas -->
+    <div id="map-area" style="position:absolute;top:114px;left:0;right:360px;bottom:0;"></div>
+
+    <!-- RIGHT SIDE: Log + Dice -->
+    <div style="position:absolute;top:0;right:0;width:360px;bottom:0;
+                display:flex;flex-direction:column;border-left:1px solid var(--border);
+                background:var(--surface);">
+
+      <div class="panel-hdr">SESSION LOG</div>
+
+      <!-- DICE PANEL -->
+      <div style="padding:10px;border-bottom:1px solid var(--border);">
+        <div class="sec-title">BALANCE CHECK</div>
+        <div style="display:flex;gap:12px;justify-content:center;margin-bottom:8px;" id="check-dice-row">
+          <!-- Populated by JS -->
+        </div>
+        <div id="check-result" style="display:none;text-align:center;padding:6px;margin-bottom:6px;"></div>
+        <button class="btn btn-blood btn-full" onclick="doBalanceCheck()" style="margin-top:4px;">ROLL CHECK</button>
+
+        <!-- Adjustments -->
+        <div style="margin-top:8px;">
+          <div class="sec-title">ADJUSTMENTS <span id="adj-count" style="font-size:9px;color:var(--text-dim);"></span></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px;">
+            <button class="btn btn-sm" onclick="openAdjModal('associative')">ASSOCIATIVE ±pip/layer</button>
+            <button class="btn btn-sm" onclick="openAdjModal('situative')">SITUATIVE ±pip/any</button>
+            <button class="btn btn-sm" onclick="openAdjModal('radical')">RADICAL reroll</button>
+            <button class="btn btn-sm" onclick="openAdjModal('odd')">ODD swap 2</button>
+          </div>
+          <button class="btn btn-sm btn-full" onclick="resetAdj()">RESET ADJ</button>
+        </div>
+
+        <!-- Wound Die -->
+        <div style="margin-top:10px;border-top:1px solid var(--border);padding-top:8px;">
+          <div class="sec-title">WOUND D12</div>
+          <div style="display:flex;gap:4px;justify-content:center;margin-bottom:6px;" id="wound-degree-btns">
+            <button class="btn btn-sm" data-deg="Improvised" onclick="setWoundDeg(this)">IMP</button>
+            <button class="btn btn-sm btn-blood" data-deg="Determined" onclick="setWoundDeg(this)">DET</button>
+            <button class="btn btn-sm" data-deg="Proficient" onclick="setWoundDeg(this)">PRO</button>
+            <button class="btn btn-sm" data-deg="ionizing" onclick="setWoundDeg(this)">ION</button>
+          </div>
+          <button class="btn btn-blood btn-full" onclick="doWoundRoll()">ROLL WOUND</button>
+          <div id="wound-result" style="text-align:center;margin-top:6px;font-size:11px;display:none;"></div>
+        </div>
+
+        <!-- Initiative Roll -->
+        <div style="margin-top:10px;border-top:1px solid var(--border);padding-top:8px;">
+          <div class="sec-title">INITIATIVE ROLL</div>
+          <button class="btn btn-full" onclick="doInitRoll()">ROLL MY INITIATIVE</button>
+          <div id="init-result" style="text-align:center;margin-top:6px;font-size:10px;display:none;"></div>
+        </div>
+      </div>
+
+      <!-- LOG -->
+      <div id="combat-log" class="log-scroll" style="flex:1;min-height:0;overflow-y:auto;"></div>
+
+      <!-- CHAT INPUT -->
+      <div style="padding:6px;border-top:1px solid var(--border);display:flex;gap:4px;">
+        <input id="chat-input" type="text" placeholder="Message..." style="flex:1;"
+          onkeydown="if(event.key==='Enter')sendChat()">
+        <button class="btn btn-blood btn-sm" onclick="sendChat()">SEND</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════ PAGE: CHARACTER SHEET ══════════ -->
+  <div class="page" data-page="sheet" style="flex-direction:column;overflow:hidden;">
+    <div id="sheet-container" style="flex:1;overflow:hidden;display:flex;flex-direction:column;"></div>
+  </div>
+
+  <!-- ══════════ PAGE: REFERENCE ══════════ -->
+  <div class="page" data-page="ref" style="overflow-y:auto;padding:20px;max-width:900px;margin:0 auto;">
+
+    <h2>QUICK REFERENCE</h2>
+    <div class="quote" style="margin-bottom:16px;">"Ion is neither a substance, nor an abstraction. It is a symbiosis between the person, their consciousness and the pain that they could feel."</div>
+
+    <h3 style="margin-bottom:8px;">BALANCE CHECK</h3>
+    <p style="font-size:11px;color:var(--text-muted);font-family:var(--font-prose);font-style:italic;line-height:1.7;margin-bottom:12px;">
+      Roll three dice (BONE/MEAT/SKIN). If their order matches your Balance order (ascending Layer Values), the check succeeds. Base success ~10%. Use Adjustments to improve.
+    </p>
+
+    <h3 style="margin-bottom:6px;">ADJUSTMENTS</h3>
+    <table class="qr-table" style="margin-bottom:16px;">
+      <tr><td>ASSOCIATIVE</td><td>±1 pip on a specific Layer's die</td></tr>
+      <tr><td>SITUATIVE</td><td>±1 pip on any die</td></tr>
+      <tr><td>RADICAL</td><td>Reroll a particular die</td></tr>
+      <tr><td>SOMETHING ODD</td><td>Swap two dice values</td></tr>
+    </table>
+
+    <h3 style="margin-bottom:6px;">THE THREE WAYS</h3>
+    <table class="qr-table" style="margin-bottom:16px;">
+      <tr><td style="color:var(--bone)">INERTIALIZATION</td><td>Control Inertia. BONE. Innerts.</td></tr>
+      <tr><td style="color:var(--meat)">PROTOCOLYZING</td><td>Reprogram flesh with Protocols. MEAT. Protocolytes.</td></tr>
+      <tr><td style="color:var(--skin)">ALGORYTHMICS</td><td>Alter reality with Algorithms. SKIN. Algorithmists.</td></tr>
+    </table>
+
+    <h3 style="margin-bottom:6px;">WOUND DIE (D12)</h3>
+    <table class="qr-table" style="margin-bottom:16px;">
+      <thead><tr><th style="text-align:left;padding:3px 6px;color:var(--text-dim);">DEGREE</th><th style="padding:3px 6px;color:var(--text-dim);">0</th><th style="padding:3px 6px;color:var(--text-dim);">1</th><th style="padding:3px 6px;color:var(--text-dim);">2</th><th style="padding:3px 6px;color:var(--text-dim);">3</th><th style="padding:3px 6px;color:var(--text-dim);">4</th></tr></thead>
+      <tr><td>Improvised</td><td style="text-align:center;">1-6</td><td style="text-align:center;">7-12</td><td style="text-align:center;">—</td><td style="text-align:center;">—</td><td style="text-align:center;">—</td></tr>
+      <tr><td>Determined</td><td style="text-align:center;">1-4</td><td style="text-align:center;">5-8</td><td style="text-align:center;">9-12</td><td style="text-align:center;">—</td><td style="text-align:center;">—</td></tr>
+      <tr><td>Proficient</td><td style="text-align:center;">1-3</td><td style="text-align:center;">4-6</td><td style="text-align:center;">7-9</td><td style="text-align:center;">10-12</td><td style="text-align:center;">—</td></tr>
+      <tr><td>Ionizing</td><td style="text-align:center;">—</td><td style="text-align:center;">1-3</td><td style="text-align:center;">4-6</td><td style="text-align:center;">7-9</td><td style="text-align:center;">10-12</td></tr>
+    </table>
+
+    <h3 style="margin-bottom:6px;">Π-ADICITY OUTCOMES</h3>
+    <table class="qr-table" style="margin-bottom:16px;">
+      <tr><td style="color:var(--bone)">BONE prevails</td><td>Inert Ascension — Crown. Will subverted by Inertia.</td></tr>
+      <tr><td style="color:var(--meat)">MEAT prevails</td><td>Unending Biosis — Core. Protocols run uncontrolled.</td></tr>
+      <tr><td style="color:var(--skin)">SKIN prevails</td><td>Subprocessoral Dissipation — Carapace. Absorbed by Algorithms.</td></tr>
+    </table>
+
+    <h3 style="margin-bottom:6px;">COMBAT</h3>
+    <div class="quote" style="margin-bottom:8px;">All attacks are GUARANTEED hits. Damage degree determines severity — zero damage can be narrated as evasion.</div>
+    <ol style="font-size:11px;color:var(--text-muted);line-height:2;font-family:var(--font-prose);padding-left:16px;margin-bottom:16px;">
+      <li>Roll initiative (count minimum adjustments to succeed).</li>
+      <li>State attack: target + targeted limb.</li>
+      <li>Narrator declares consequence of success/failure.</li>
+      <li>Decide whether to proceed.</li>
+      <li>Spend ion → Roll Wound Die → declare wound value.</li>
+      <li>Narrator applies reactions.</li>
+    </ol>
+
+    <h3 style="margin-bottom:6px;">GLOSSARY</h3>
+    <table class="qr-table">
+      <tr><td>Ion</td><td>The force linking consciousness and pain</td></tr>
+      <tr><td>Pioneer</td><td>Active user of Ion</td></tr>
+      <tr><td>Door</td><td>Ion-granted ability (from greek δώρο, "gift")</td></tr>
+      <tr><td>Pledge</td><td>The πληγή — wound/drawback for a Door</td></tr>
+      <tr><td>Mortise</td><td>Quantitative limit on Doors per limb</td></tr>
+      <tr><td>Layer</td><td>Physical material at a depth of a Limb</td></tr>
+      <tr><td>Vessel</td><td>Ionic "unit" of a Limb</td></tr>
+      <tr><td>Balance</td><td>Layer Values in ascending order</td></tr>
+      <tr><td>Gene</td><td>Pioneer's ionic signature</td></tr>
+      <tr><td>Ritual</td><td>Action used to activate a Door</td></tr>
+      <tr><td>Competence</td><td>Skill (Layer + Narrowness + Proficiency)</td></tr>
+      <tr><td>Π-Adicity</td><td>Terminal ionic state — game over</td></tr>
+    </table>
+  </div>
+
+  <!-- ══════════ PAGE: PROFILES (GM) ══════════ -->
+  <div class="page" data-page="profiles" style="overflow-y:auto;padding:20px;max-width:700px;margin:0 auto;">
+    <h2 style="margin-bottom:16px;">PLAYER PROFILES</h2>
+    <div style="display:flex;gap:8px;margin-bottom:16px;">
+      <input id="new-profile-name" type="text" placeholder="Profile name (character slot)..." style="flex:1;">
+      <button class="btn btn-blood" onclick="createProfile()">+ ADD PROFILE</button>
+    </div>
+    <div id="profiles-list"></div>
+  </div>
+
+  <!-- ══════════ PAGE: PARTY (GM) ══════════ -->
+  <div class="page" data-page="party" style="overflow-y:auto;padding:20px;">
+    <h2 style="margin-bottom:16px;">PARTY</h2>
+    <div id="party-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px;"></div>
+  </div>
+
+</div><!-- end app-shell -->
+
+<!-- ═══════════════════════════════════
+     MODALS
+═══════════════════════════════════ -->
+
+<!-- DOOR MODAL -->
+<div class="modal-overlay" id="doorModal">
+<div class="modal">
+  <div class="modal-title" id="door-modal-title">INSCRIBE A DOOR</div>
+  <div class="field">
+    <label class="field-label">Door Name</label>
+    <input id="door-name" type="text" placeholder="e.g. Delayed Thermal Balance">
+  </div>
+  <div class="row">
+    <div class="field">
+      <label class="field-label">Limb</label>
+      <select id="door-limb" onchange="updateDoorLayerOptions()">
+        <option value="head">Head</option>
+        <option value="armL">Left Arm</option>
+        <option value="armR">Right Arm</option>
+        <option value="torso">Torso</option>
+        <option value="legL">Left Leg</option>
+        <option value="legR">Right Leg</option>
+      </select>
+    </div>
+    <div class="field">
+      <label class="field-label">Layer</label>
+      <select id="door-layer" onchange="updateOrganOptions()"></select>
+    </div>
+  </div>
+  <div class="row">
+    <div class="field">
+      <label class="field-label">Organ / Part</label>
+      <select id="door-organ"></select>
+    </div>
+    <div class="field">
+      <label class="field-label">Activation</label>
+      <select id="door-active">
+        <option value="active">Active (ion spent)</option>
+        <option value="passive">Passive (vessel blocked)</option>
+      </select>
+    </div>
+  </div>
+  <div class="row">
+    <div class="field">
+      <label class="field-label">Vessels (1-3, torso up to 6)</label>
+      <input id="door-vessels" type="number" min="1" max="6" value="1">
+    </div>
+    <div class="field">
+      <label class="field-label">Ritual Trigger</label>
+      <input id="door-ritual" type="text" placeholder="Snap fingers, blink...">
+    </div>
+  </div>
+  <div class="field">
+    <label class="field-label">Effect</label>
+    <textarea id="door-effect" rows="3" placeholder="What does this Door do?"></textarea>
+  </div>
+  <div class="field">
+    <label class="field-label">Pledge (the πληγή)</label>
+    <textarea id="door-pledge" rows="2" placeholder="What does the Pioneer suffer?"></textarea>
+  </div>
+  <div class="sec-title" style="margin-top:8px;">BALANCE MODIFIERS</div>
+  <div class="row3">
+    <div class="field">
+      <label class="field-label" style="color:var(--bone);">BONE ±</label>
+      <input id="door-bone-mod" type="number" value="0" min="-10" max="10">
+    </div>
+    <div class="field">
+      <label class="field-label" style="color:var(--meat);">MEAT ±</label>
+      <input id="door-meat-mod" type="number" value="0" min="-10" max="10">
+    </div>
+    <div class="field">
+      <label class="field-label" style="color:var(--skin);">SKIN ±</label>
+      <input id="door-skin-mod" type="number" value="0" min="-10" max="10">
+    </div>
+  </div>
+  <div class="modal-actions">
+    <button class="btn" onclick="el('doorModal').classList.remove('open')">CANCEL</button>
+    <button class="btn btn-blood" onclick="saveDoorModal()">INSCRIBE</button>
+  </div>
+</div>
+</div>
+
+<!-- DOOR PREVIEW MODAL -->
+<div class="modal-overlay" id="doorPreviewModal">
+<div class="modal">
+  <div class="modal-title" id="preview-door-name">Door</div>
+  <div id="preview-door-body"></div>
+  <div class="modal-actions">
+    <button class="btn" onclick="el('doorPreviewModal').classList.remove('open')">CLOSE</button>
+  </div>
+</div>
+</div>
+
+<!-- COMPETENCE MODAL -->
+<div class="modal-overlay" id="compModal">
+<div class="modal">
+  <div class="modal-title">ADD COMPETENCE</div>
+  <div class="field">
+    <label class="field-label">Name</label>
+    <input id="comp-name" type="text" placeholder="e.g. Surgery, Knotting, Arson...">
+  </div>
+  <div class="row">
+    <div class="field">
+      <label class="field-label">Layer</label>
+      <select id="comp-layer">
+        <option value="BONE">BONE</option>
+        <option value="MEAT">MEAT</option>
+        <option value="SKIN">SKIN</option>
+      </select>
+    </div>
+    <div class="field">
+      <label class="field-label">Narrowness</label>
+      <select id="comp-narrowness">
+        <option value="Usual">Usual (+1)</option>
+        <option value="Narrow">Narrow (+2)</option>
+        <option value="Specific">Specific (+3-4)</option>
+      </select>
+    </div>
+  </div>
+  <div class="field">
+    <label class="field-label">Proficiency</label>
+    <select id="comp-proficiency">
+      <option value="Basic">Basic</option>
+      <option value="Proficient">Proficient</option>
+      <option value="Expert">Expert</option>
+      <option value="Ionic">Ionic</option>
+    </select>
+  </div>
+  <div class="modal-actions">
+    <button class="btn" onclick="el('compModal').classList.remove('open')">CANCEL</button>
+    <button class="btn btn-blood" onclick="saveCompModal()">ADD</button>
+  </div>
+</div>
+</div>
+
+<!-- PRIORITY MODAL -->
+<div class="modal-overlay" id="priorityModal">
+<div class="modal">
+  <div class="modal-title">SET BALANCE PRIORITY</div>
+  <p style="font-size:11px;color:var(--text-muted);margin-bottom:12px;font-family:var(--font-prose);font-style:italic;">
+    Some Layer Values are equal. Drag to set priority order (first = lowest in ties).
+  </p>
+  <div id="priority-list"></div>
+  <div class="modal-actions">
+    <button class="btn" onclick="el('priorityModal').classList.remove('open')">CANCEL</button>
+    <button class="btn btn-blood" onclick="savePriority()">CONFIRM ORDER</button>
+  </div>
+</div>
+</div>
+
+<!-- ADJUSTMENT MODAL -->
+<div class="modal-overlay" id="adjModal">
+<div class="modal">
+  <div class="modal-title" id="adj-modal-title">ADJUSTMENT</div>
+  <div id="adj-modal-body"></div>
+  <div class="modal-actions">
+    <button class="btn" onclick="el('adjModal').classList.remove('open')">CANCEL</button>
+    <button class="btn btn-blood" id="adj-confirm-btn">APPLY</button>
+  </div>
+</div>
+</div>
+
+<!-- SCRIPTS -->
+<script src="js/state.js"></script>
+<script src="js/charsheet.js"></script>
+<script src="js/hexmap.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
