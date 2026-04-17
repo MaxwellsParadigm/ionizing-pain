@@ -207,28 +207,29 @@ function handleServerMsg(msg) {
 
 // ─────────────────────────────────────────────
 // API HELPERS
+// Simple requests only (no custom headers) — avoids CORS preflight
+// which dev tunnels and some proxies intercept before Express sees it.
 // ─────────────────────────────────────────────
-const _fetchHeaders = () => ({
-  'Content-Type': 'application/json',
-  'ngrok-skip-browser-warning': '1',   // prevents ngrok free-tier interstitial
-});
-
 async function apiGet(path) {
-  const r = await fetch(API_BASE + path, { headers: _fetchHeaders() });
+  const r = await fetch(API_BASE + path);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
   return r.json();
 }
 
 async function apiPost(path, body) {
+  // POST with text/plain avoids preflight; server accepts both content-types
   const r = await fetch(API_BASE + path, {
     method: 'POST',
-    headers: _fetchHeaders(),
+    headers: { 'Content-Type': 'text/plain' },
     body: JSON.stringify(body),
   });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
   return r.json();
 }
 
 async function apiDelete(path) {
-  const r = await fetch(API_BASE + path, { method: 'DELETE', headers: _fetchHeaders() });
+  const r = await fetch(API_BASE + path, { method: 'DELETE' });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
   return r.json();
 }
 
