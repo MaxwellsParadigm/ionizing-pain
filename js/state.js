@@ -208,22 +208,27 @@ function handleServerMsg(msg) {
 // ─────────────────────────────────────────────
 // API HELPERS
 // ─────────────────────────────────────────────
+const _fetchHeaders = () => ({
+  'Content-Type': 'application/json',
+  'ngrok-skip-browser-warning': '1',   // prevents ngrok free-tier interstitial
+});
+
 async function apiGet(path) {
-  const r = await fetch(API_BASE + path);
+  const r = await fetch(API_BASE + path, { headers: _fetchHeaders() });
   return r.json();
 }
 
 async function apiPost(path, body) {
   const r = await fetch(API_BASE + path, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: _fetchHeaders(),
     body: JSON.stringify(body),
   });
   return r.json();
 }
 
 async function apiDelete(path) {
-  const r = await fetch(API_BASE + path, { method: 'DELETE' });
+  const r = await fetch(API_BASE + path, { method: 'DELETE', headers: _fetchHeaders() });
   return r.json();
 }
 
