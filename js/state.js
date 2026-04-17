@@ -3,10 +3,65 @@
  */
 
 // ─────────────────────────────────────────────
-// CONFIG — edit SERVER_URL to point at your server
+// CONFIG
+// These MUST be set via setServerUrl() before any API calls.
+// Defaults to localhost only when the page itself is served from localhost.
+// When hosted on GitHub Pages (HTTPS), the browser blocks plain http://,
+// so the user must enter the server address manually.
 // ─────────────────────────────────────────────
-const SERVER_URL = window.IP_SERVER_URL || `ws://${window.location.hostname}:3000`;
-const API_BASE   = window.IP_API_URL    || `http://${window.location.hostname}:3000/api`;
+const _isLocalhost = ['localhost','127.0.0.1'].includes(window.location.hostname);
+
+let SERVER_URL = _isLocalhost
+  ? `ws://localhost:3000`
+  : '';   // must be filled in by user on landing page
+
+let API_BASE = _isLocalhost
+  ? `http://localhost:3000/api`
+  : '';   // must be filled in by user on landing page
+
+/**
+ * Call this with the raw user input before any API requests.
+ * Accepts any of:
+ *   192.168.1.42          → ws://192.168.1.42:3000  &  http://192.168.1.42:3000/api
+ *   192.168.1.42:4000     → ws://192.168.1.42:4000  &  http://192.168.1.42:4000/api
+ *   ws://192.168.1.42:3000
+ *   https://abc.ngrok.io  → wss://abc.ngrok.io       &  https://abc.ngrok.io/api
+ */
+function setServerUrl(raw) {
+  raw = (raw || '').trim().replace(/\/$/, '');
+  if (!raw) return false;
+
+  // Already has scheme
+  if (raw.startsWith('ws://') || raw.startsWith('wss://')) {
+    SERVER_URL = raw;
+    API_BASE   = raw.replace('wss://', 'https://').replace('ws://', 'http://') + '/api';
+    return true;
+  }
+  if (raw.startsWith('https://')) {
+    SERVER_URL = raw.replace('https://', 'wss://');
+    API_BASE   = raw + '/api';
+    return true;
+  }
+  if (raw.startsWith('http://')) {
+    SERVER_URL = raw.replace('http://', 'ws://');
+    API_BASE   = raw + '/api';
+    return true;
+  }
+
+  // Bare host or host:port — detect scheme from page protocol
+  const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
+  const httpScheme = window.location.protocol === 'https:' ? 'https' : 'http';
+  // Add default port if none supplied
+  const hasPort = /:\d+$/.test(raw);
+  const full = hasPort ? raw : `${raw}:3000`;
+  SERVER_URL = `${scheme}://${full}`;
+  API_BASE   = `${httpScheme}://${full}/api`;
+  return true;
+}
+
+// Persist server URL across reloads
+const _savedUrl = localStorage.getItem('ip_server_url');
+if (_savedUrl) setServerUrl(_savedUrl);
 
 // ─────────────────────────────────────────────
 // APP STATE

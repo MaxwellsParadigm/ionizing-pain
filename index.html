@@ -31,11 +31,22 @@
       </div>
       <button class="btn btn-blood btn-full" onclick="createCampaign()">+ CREATE CAMPAIGN</button>
     </div>
-    <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">
+    <div style="margin-top:0;border-top:1px solid var(--border);padding-top:12px;">
       <div class="field">
-        <label class="field-label">SERVER URL (if different from this page)</label>
-        <input id="server-url-input" type="text" placeholder="ws://192.168.1.x:3000"
-          value="">
+        <label class="field-label" style="color:var(--blood-bright);">SERVER ADDRESS</label>
+        <div style="font-size:9px;color:var(--text-dim);margin-bottom:5px;line-height:1.6;">
+          Your local IP, e.g. <code style="color:var(--ion);">192.168.1.42</code>
+          — or an ngrok URL like <code style="color:var(--ion);">abc123.ngrok.io</code><br>
+          <span style="color:var(--blood);">GitHub Pages requires HTTPS:</span>
+          run <code style="color:var(--ion);">ngrok http 3000</code> and paste the https:// URL.
+        </div>
+        <div style="display:flex;gap:6px;">
+          <input id="server-url-input" type="text"
+            placeholder="192.168.1.42  or  abc123.ngrok.io"
+            style="flex:1;"
+            onkeydown="if(event.key==='Enter')loadCampaigns()">
+          <button class="btn btn-blood" onclick="loadCampaigns()">CONNECT</button>
+        </div>
       </div>
     </div>
   </div>

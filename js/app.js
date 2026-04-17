@@ -20,14 +20,28 @@ const WOUND_TABLE = {
 // LANDING
 // ─────────────────────────────────────────────
 async function loadCampaigns() {
-  const serverUrl = el('server-url-input').value.trim();
-  if (serverUrl) {
-    // Update API base from input (replace ws:// with http://)
-    window.IP_API_URL = serverUrl.replace('ws://', 'http://').replace('wss://', 'https://');
+  const input = el('server-url-input');
+  const raw = input.value.trim();
+
+  // Apply server URL — MUST happen before any fetch (fixes HTTPS/mixed-content)
+  if (raw) {
+    setServerUrl(raw);
+    localStorage.setItem('ip_server_url', raw);
+  }
+
+  // If still no API_BASE (hosted on GH Pages, no URL entered yet) show prompt
+  if (!API_BASE) {
+    el('campaign-list').innerHTML = `
+      <div style="color:var(--blood-bright);font-size:10px;padding:6px 0;line-height:1.8;">
+        Enter your server address above and click CONNECT.<br>
+        <span style="color:var(--text-dim);">e.g. <code>192.168.1.42</code> &nbsp;or&nbsp; <code>abc123.ngrok.io</code></span>
+      </div>`;
+    return;
   }
 
   const listEl = el('campaign-list');
-  listEl.innerHTML = '<div style="color:var(--text-dim);font-size:10px;padding:6px 0;">Loading...</div>';
+  const serverDisplay = API_BASE.replace('/api', '');
+  listEl.innerHTML = `<div style="color:var(--text-dim);font-size:10px;padding:6px 0;">Connecting to ${serverDisplay}…</div>`;
 
   try {
     const campaigns = await apiGet('/campaigns');
@@ -45,7 +59,15 @@ async function loadCampaigns() {
       </div>
     `).join('');
   } catch(e) {
-    listEl.innerHTML = `<div style="color:var(--blood-bright);font-size:10px;padding:6px 0;">Cannot reach server.<br>Make sure server.js is running and check the URL above.</div>`;
+    listEl.innerHTML = `
+      <div style="color:var(--blood-bright);font-size:10px;padding:6px 0;line-height:1.9;">
+        ✗ Cannot reach <code style="color:var(--ion);">${serverDisplay}</code><br>
+        <strong>If using GitHub Pages (HTTPS):</strong><br>
+        Plain <code>http://</code> is blocked by browsers. Use ngrok:<br>
+        <code style="color:var(--ion);">ngrok http 3000</code><br>
+        then paste the <code>https://xxxx.ngrok.io</code> URL here.<br><br>
+        <strong>If local:</strong> check server is running (<code>npm start</code>) and IP is correct.
+      </div>`;
   }
 }
 
@@ -605,7 +627,25 @@ function doInitRoll() {
 // INIT
 // ─────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
-  loadCampaigns();
+  // Restore saved server URL into input field
+  const saved = localStorage.getItem('ip_server_url');
+  if (saved) {
+    el('server-url-input').value = saved;
+  }
+
+  // Auto-connect only if we already have a valid URL
+  // (either localhost default or restored from localStorage)
+  if (API_BASE) {
+    loadCampaigns();
+  } else {
+    // Show "enter server address" prompt immediately
+    el('campaign-list').innerHTML = `
+      <div style="color:var(--text-muted);font-size:10px;padding:6px 0;line-height:1.8;">
+        Enter your server address below and click <strong style="color:var(--text);">CONNECT</strong>.<br>
+        <span style="color:var(--text-dim);">Local: <code style="color:var(--ion);">192.168.1.42</code>
+        &nbsp;·&nbsp; Via ngrok: <code style="color:var(--ion);">abc123.ngrok.io</code></span>
+      </div>`;
+  }
 
   // Close modals on overlay click
   document.querySelectorAll('.modal-overlay').forEach(overlay => {
